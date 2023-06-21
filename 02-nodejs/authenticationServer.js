@@ -29,9 +29,86 @@
   Testing the server - run `npm run test-authenticationServer` command in terminal
  */
 
-const express = require("express")
+const express = require("express");
+const { v4: uuidv4 } = require("uuid");
 const PORT = 3000;
+const bodyParser = require("body-parser");
 const app = express();
+
 // write your logic here, DONT WRITE app.listen(3000) when you're running tests, the tests will automatically start the server
+
+app.use(bodyParser.json());
+
+userData = [];
+
+const doesUserExists = (email) => {
+  return userData.find((user) => user.email === email);
+};
+
+const getUserDetails = (email, password) => {
+  return userData.find(
+    (user) => user.email == email && user.password == password
+  );
+};
+
+app.post("/signup", (req, res) => {
+  const data = req.body;
+  if (!doesUserExists(data.email)) {
+    const newId = uuidv4();
+    const newUser = {
+      id: newId,
+      email: data.email,
+      password: data.password,
+      firstName: data.firstName,
+      lastName: data.lastName,
+    };
+    userData.push(newUser);
+    res.status(201).send("Signup successful");
+  } else {
+    res.status(400).send("Username already exists");
+  }
+});
+
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+  if (!doesUserExists(email)) {
+    res.send(401).send("Unauthorized");
+  } else {
+    if (!getUserDetails(email, password)) {
+      res.status(401).send("Invalid Credentials");
+    } else {
+      const userDetails = getUserDetails(email, password);
+
+      res.status(200).json({
+        email: userDetails.email,
+        firstName: userDetails.firstName,
+        lastName: userDetails.lastName,
+      });
+    }
+  }
+});
+
+app.get("/data", (req, res) => {
+  const { email, password } = req.headers;
+  if (!getUserDetails(email, password)) {
+    res.status(401).send("Unauthorized");
+  } else {
+    let userList = [];
+    for (let i = 0; i < userData.length; i++) {
+      const newObj = {
+        id: userData[i].id,
+        email: userData[i].email,
+        firstName: userData[i].firstName,
+        lastName: userData[i].lastName,
+      };
+      userList.push(newObj);
+    }
+    res.status(200).json({ users: userList });
+  }
+});
+
+app.use((req, res, next) => {
+  res.status(404).send("Not Found");
+});
 
 module.exports = app;
